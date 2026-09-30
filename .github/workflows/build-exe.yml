@@ -1,0 +1,44 @@
+name: Gerar EXE
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**/*.py'
+      - '**/*.ps1'
+      - '**/*.bat'
+      - '.github/workflows/build-exe.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Localizar programa
+        shell: powershell
+        run: |
+          $py = Get-ChildItem -Recurse -Filter *.py | Where-Object {
+            $_.Name -match 'Seletor|Impressora|Escolher'
+          } | Select-Object -First 1
+          if (-not $py) {
+            Write-Error "Não encontrei o arquivo Python do seletor de impressoras."
+            exit 1
+          }
+          Write-Host "Arquivo encontrado: $($py.FullName)"
+          pyinstaller --onefile --windowed --name Seletor-de-Impressoras $py.FullName
+
+      - name: Publicar EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Seletor-de-Impressoras-Windows
+          path: dist/Seletor-de-Impressoras.exe
